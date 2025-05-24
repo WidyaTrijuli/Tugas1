@@ -1,125 +1,91 @@
 package restassured;
 
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
 
 public class RestAssureImpl {
-    // String token =
-    // "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjIzOCIsImlhdCI6MTc0NzkwNDI5OX0.tDOJxWRsLWOUX0pOgyQk12XCuFrC7CoP2cMc3u5dxqU";
 
-    String token;
+        String token;
+        String id;
 
-    @Test
-    public void testLogin() {
-        RestAssured.baseURI = "https://whitesmokehouse.com";
+        @BeforeClass
+        public void setup() {
+                System.out.println("=== Sebelum Semua Test ===");
+                RestAssured.baseURI = "https://whitesmokehouse.com";
+        }
 
-        String requestBody = "{\n" +
-                "    \"email\": \"afteroffice6@yopmail.com\",\n" +
-                "    \"password\": \"afteroffice1234\"\n" +
-                "}";
-        Response response = RestAssured.given()
-                .header("Content-Type", "application/json")
-                .body(requestBody)
-                .log().all()
-                .when()
-                .post("/webhook/employee/login");
+        @AfterClass
+        public void teardown() {
+                System.out.println("=== Setelah Semua Test ===");
 
-        System.out.println("Response: " + response.jsonPath().getString("[0].token"));
-        token = response.jsonPath().getString("[0].token");
+                token = null;
+                id = null;
+        }
 
-    }
+        @Test
+        public void testRegister() {
+                String requestBody = "{\n" +
+                                "    \"email\": \"makurototo@yopmail.com\",\n" +
+                                "    \"full_name\": \"Widya\",\n" +
+                                "    \"department\": \"Finance\",\n" +
+                                "    \"title\": \"Finance\",\n" +
+                                "    \"password\": \"asdASD123!@#\"\n" +
+                                "}";
+                Response response = RestAssured.given()
+                                .header("Content-Type", "application/json")
+                                .body(requestBody)
+                                .log().all()
+                                .when()
+                                .post("/webhook/employee/add");
 
-    @Test(dependsOnMethods = "testLogin", priority = 1)
-    public void testGetEmployee() {
-        RestAssured.baseURI = "https://whitesmokehouse.com";
-        Response response = RestAssured.given()
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + token)
-                .log().all()
-                .when()
-                .get("/webhook/employee/get");
+                System.out.println("Status code: " + response.getStatusCode());
+                System.out.println("Response body: " + response.getBody().asString());
+                id = response.jsonPath().getString("[0].id");
+                System.out.println("Extracted ID: " + id);
+        }
 
-        System.out.println("Response: " + response.asPrettyString());
-        assert response.statusCode() == 200 : "status code is 200 but got" + response.statusCode();
-        assert response.jsonPath().getString("[0].email").equals("afteroffice6@yopmail.com")
-                : "expected email afteroffice6@yopmail.com " + response.jsonPath().getString("[0].email");
-        assert response.jsonPath().getString("[0].full_name").equals("afteroffice1234")
-                : "Expected full name afteroffice1234 but got " + response.jsonPath().getString("[0].full_name");
+        @Test(dependsOnMethods = "testRegister", priority = 1)
+        public void testLogin() {
+                String requestBody = "{\n" +
+                                "    \"email\": \"makurototo@yopmail.com\",\n" +
+                                "    \"password\": \"asdASD123!@#\"\n" +
+                                "}";
+                Response response = RestAssured.given()
+                                .header("Content-Type", "application/json")
+                                .body(requestBody)
+                                .log().all()
+                                .when()
+                                .post("/webhook/employee/login");
 
-        assert response.jsonPath().getString("[0].department").equals("Manager")
-                : "Expected department Manager but got " + response.jsonPath().getString("[0].department");
-    }
+                System.out.println("Status code: " + response.getStatusCode());
+                System.out.println("Response body: " + response.getBody().asString());
+                token = response.jsonPath().getString("[0].token");
+                System.out.println("Extracted Token: " + token);
+        }
 
-    @Test(dependsOnMethods = "testLogin", priority = 2)
-    public void testUpdateEmployee() {
-        RestAssured.baseURI = "https://whitesmokehouse.com";
+        @Test(dependsOnMethods = "testLogin", priority = 2)
+        public void testGetEmployee() {
+                Response response = RestAssured.given()
+                                .header("Content-Type", "application/json")
+                                .header("Authorization", "Bearer " + token)
+                                .log().all()
+                                .when()
+                                .get("/webhook/employee/get?id=" + id);
 
-        String bodyUpdate = "{\n" +
-                "  \"email\": \"afteroffice3@yopmail.com\",\n" +
-                "  \"full_name\": \"afteroffice1234\",\n" +
-                "  \"department\": \"Manager\",\n" +
-                "  \"title\": \"Manager\",\n" +
-                "  \"password\": \"afteroffice1234\"\n" +
-                "}";
+                System.out.println("Response: " + response.asPrettyString());
 
-        Response response = RestAssured.given()
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + token)
-                .body(bodyUpdate)
-                .log().all()
-                .when()
-                .put("/webhook/employee/update");
-
-        System.out.println("Response: " + response.asPrettyString());
-
-    }
-
-    @Test(dependsOnMethods = "testLogin", priority = 3)
-    public void testDeleteEmployee() {
-        RestAssured.baseURI = "https://whitesmokehouse.com";
-
-        Response response = RestAssured.given()
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + token)
-                .log().all()
-                .when()
-                .delete("/webhook/employee/delete");
-
-        System.out.println("Response: " + response.asPrettyString());
-    }
-
-    @Test
-    public void testGetAllEmployees() {
-        RestAssured.baseURI = "https://whitesmokehouse.com";
-
-        Response response = RestAssured.given()
-                .header("Content-Type", "application/json")
-                .log().all()
-                .when()
-                .get("/webhook/employee/get_all");
-
-        System.out.println("Response: " + response.asPrettyString());
-
-        assert response.statusCode() == 200 : "Status code is 200 but got " + response.statusCode();
-    }
-
-    // @Test
-    // public void testEmployeeInvalidToken() {
-    // RestAssured.baseURI = "https://whitesmokehouse.com";
-
-    // Response response = RestAssured.given()
-    // .header("Content-Type", "application/json")
-    // .header("Authorization", "Bearer " + token + "invalid")
-    // .log().all()
-    // .when()
-    // .get("/webhook/employee/get");
-
-    // // System.out.println("Response: " + response.asPrettyString());
-
-    // // assert response.statusCode() == 403 : "Status code is 403 but got " +
-    // response.statusCode();
-    //     }
-
+                assert response.statusCode() == 200 : "Expected status code 200 but got " + response.statusCode();
+                assert response.jsonPath().getString("[0].email").equals("makurototo@yopmail.com")
+                                : "Expected email makurototo@yopmail.com but got "
+                                                + response.jsonPath().getString("[0].email");
+                assert response.jsonPath().getString("[0].full_name").equals("Widya")
+                                : "Expected full name Widya but got " + response.jsonPath().getString("[0].full_name");
+                assert response.jsonPath().getString("[0].department").equals("Finance")
+                                : "Expected department Finance but got "
+                                                + response.jsonPath().getString("[0].department");
+        }
 }
